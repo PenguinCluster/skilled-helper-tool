@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Github, ArrowRight, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-trading.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-20">
       {/* Animated background elements */}
@@ -34,22 +37,28 @@ const Hero = () => {
               <Button 
                 size="xl" 
                 variant="hero"
-                asChild
+                onClick={() => navigate("/auth")}
               >
-                <a href="https://github.com/oboshto/tradie" target="_blank" rel="noopener noreferrer">
-                  <Github className="w-5 h-5" />
-                  Get Started
-                  <ArrowRight className="w-5 h-5" />
-                </a>
+                Get Started
+                <ArrowRight className="w-5 h-5" />
               </Button>
               
               <Button 
                 size="xl" 
                 variant="hero-outline"
+                onClick={() => navigate("/dashboard")}
+              >
+                Dashboard
+              </Button>
+              
+              <Button 
+                size="xl" 
+                variant="outline"
                 asChild
               >
-                <a href="#features">
-                  Learn More
+                <a href="https://github.com/oboshto/tradie" target="_blank" rel="noopener noreferrer">
+                  <Github className="w-5 h-5" />
+                  GitHub
                 </a>
               </Button>
             </div>

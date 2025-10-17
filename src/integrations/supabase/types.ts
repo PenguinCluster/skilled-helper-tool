@@ -14,7 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bot_configs: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          rpc_endpoint: string | null
+          updated_at: string | null
+          user_id: string
+          wallet_private_key_encrypted: string
+          wallet_public_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rpc_endpoint?: string | null
+          updated_at?: string | null
+          user_id: string
+          wallet_private_key_encrypted: string
+          wallet_public_key: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rpc_endpoint?: string | null
+          updated_at?: string | null
+          user_id?: string
+          wallet_private_key_encrypted?: string
+          wallet_public_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_configs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      trade_history: {
+        Row: {
+          action: string
+          amount: number
+          created_at: string | null
+          error_message: string | null
+          id: string
+          price: number
+          signature: string | null
+          status: string | null
+          token_address: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          amount: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          price: number
+          signature?: string | null
+          status?: string | null
+          token_address: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          amount?: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          price?: number
+          signature?: string | null
+          status?: string | null
+          token_address?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
