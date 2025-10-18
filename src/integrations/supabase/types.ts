@@ -22,7 +22,6 @@ export type Database = {
           rpc_endpoint: string | null
           updated_at: string | null
           user_id: string
-          wallet_private_key_encrypted: string
           wallet_public_key: string
         }
         Insert: {
@@ -32,7 +31,6 @@ export type Database = {
           rpc_endpoint?: string | null
           updated_at?: string | null
           user_id: string
-          wallet_private_key_encrypted: string
           wallet_public_key: string
         }
         Update: {
@@ -42,7 +40,6 @@ export type Database = {
           rpc_endpoint?: string | null
           updated_at?: string | null
           user_id?: string
-          wallet_private_key_encrypted?: string
           wallet_public_key?: string
         }
         Relationships: [

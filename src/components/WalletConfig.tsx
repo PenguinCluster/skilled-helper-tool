@@ -6,10 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Wallet } from "lucide-react";
+import { z } from "zod";
+
+const walletConfigSchema = z.object({
+  publicKey: z.string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/, 'Invalid Solana public key format'),
+  rpcEndpoint: z.string()
+    .trim()
+    .url('Must be a valid HTTPS URL')
+    .startsWith('https://', 'RPC endpoint must use HTTPS')
+});
 
 const WalletConfig = () => {
   const [publicKey, setPublicKey] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
   const [rpcEndpoint, setRpcEndpoint] = useState("https://api.mainnet-beta.solana.com");
   const [loading, setLoading] = useState(false);
   const [hasConfig, setHasConfig] = useState(false);
@@ -51,13 +61,26 @@ const WalletConfig = () => {
       return;
     }
 
-    // Simple encryption (base64) - in production, use proper encryption
-    const encryptedPrivateKey = btoa(privateKey);
+    // Validate inputs
+    const validation = walletConfigSchema.safeParse({
+      publicKey,
+      rpcEndpoint
+    });
+
+    if (!validation.success) {
+      const errors = validation.error.errors.map(e => e.message).join(", ");
+      toast({
+        title: "Invalid input",
+        description: errors,
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
 
     const configData = {
       user_id: user.id,
       wallet_public_key: publicKey,
-      wallet_private_key_encrypted: encryptedPrivateKey,
       rpc_endpoint: rpcEndpoint
     };
 
@@ -79,10 +102,9 @@ const WalletConfig = () => {
     } else {
       toast({
         title: "Configuration saved",
-        description: "Your wallet settings have been saved securely."
+        description: "Your wallet settings have been saved. You'll provide your private key when starting the bot."
       });
       setHasConfig(true);
-      setPrivateKey("");
     }
 
     setLoading(false);
@@ -96,7 +118,7 @@ const WalletConfig = () => {
           Wallet Configuration
         </CardTitle>
         <CardDescription>
-          Configure your Solana wallet details
+          Configure your Solana wallet public key and RPC endpoint. Your private key will be requested securely when starting the bot.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -110,23 +132,9 @@ const WalletConfig = () => {
               onChange={(e) => setPublicKey(e.target.value)}
               required
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="privateKey">Private Key</Label>
-            <Input
-              id="privateKey"
-              type="password"
-              placeholder={hasConfig ? "••••••••••••••••" : "Your wallet private key"}
-              value={privateKey}
-              onChange={(e) => setPrivateKey(e.target.value)}
-              required={!hasConfig}
-            />
-            {hasConfig && (
-              <p className="text-xs text-muted-foreground">
-                Leave empty to keep existing key
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Base58-encoded Solana address (32-44 characters)
+            </p>
           </div>
           
           <div className="space-y-2">
@@ -138,6 +146,9 @@ const WalletConfig = () => {
               onChange={(e) => setRpcEndpoint(e.target.value)}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Must be a secure HTTPS endpoint
+            </p>
           </div>
           
           <Button type="submit" className="w-full" disabled={loading}>
