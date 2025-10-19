@@ -53,7 +53,7 @@ const Footer = () => {
                 asChild
               >
                 <a 
-                  href="https://github.com/oboshto/tradie" 
+                  href="https://github.com/PenguinCluster" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   aria-label="GitHub Repository"
@@ -67,7 +67,7 @@ const Footer = () => {
                 asChild
               >
                 <a 
-                  href="https://discord.gg/ApF28mbYkf" 
+                  href="https://discord.com/users/910114755346305034" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   aria-label="Join Discord"
