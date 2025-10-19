@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="container mx-auto">
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-4">
-            <h3 className="text-2xl font-bold text-gradient">Tradie</h3>
+            <h3 className="text-2xl font-bold text-gradient">Tradie Provided by PANOWORKS</h3>
             <p className="text-muted-foreground">
               Open-source Solana trading bot for automated, sophisticated trading strategies.
             </p>
@@ -23,7 +23,7 @@ const Footer = () => {
               </li>
               <li>
                 <a 
-                  href="https://github.com/oboshto/tradie" 
+                  href="https://github.com/PenguinCluster/skilled-helper-tool" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-secondary transition-colors"
