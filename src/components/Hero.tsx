@@ -29,7 +29,7 @@ const Hero = () => {
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl">
-              Tradie is an innovative, open-source trading bot tailored for the Solana blockchain. 
+              PanoTradie is an innovative, open-source trading bot tailored for the Solana blockchain. 
               Leverage advanced technical indicators and automated strategies to trade smarter.
             </p>
 
@@ -56,7 +56,7 @@ const Hero = () => {
                 variant="outline"
                 asChild
               >
-                <a href="https://github.com/oboshto/tradie" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/PenguinCluster/skilled-helper-tool" target="_blank" rel="noopener noreferrer">
                   <Github className="w-5 h-5" />
                   GitHub
                 </a>
