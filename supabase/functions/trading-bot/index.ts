@@ -5,6 +5,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ERROR_MESSAGES = {
+  MISSING_AUTH: 'Authentication required',
+  UNAUTHORIZED: 'Invalid or expired authentication',
+  INVALID_INPUT: 'Invalid request parameters',
+  INVALID_CONFIG: 'Invalid configuration',
+  INTERNAL_ERROR: 'An error occurred processing your request'
+};
+
+function mapErrorToSafeMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (message.includes('authorization') || message.includes('auth')) {
+      return ERROR_MESSAGES.MISSING_AUTH;
+    }
+    if (message.includes('unauthorized')) {
+      return ERROR_MESSAGES.UNAUTHORIZED;
+    }
+    if (message.includes('configuration') || message.includes('config')) {
+      return ERROR_MESSAGES.INVALID_CONFIG;
+    }
+    if (message.includes('invalid') || message.includes('format')) {
+      return ERROR_MESSAGES.INVALID_INPUT;
+    }
+  }
+  return ERROR_MESSAGES.INTERNAL_ERROR;
+}
+
 interface BotConfig {
   id: string;
   user_id: string;
@@ -25,6 +52,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let userId: string | undefined;
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -40,7 +69,10 @@ Deno.serve(async (req) => {
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: ERROR_MESSAGES.MISSING_AUTH, success: false }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Verify the user's JWT token
@@ -48,15 +80,23 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      return new Response(
+        JSON.stringify({ error: ERROR_MESSAGES.UNAUTHORIZED, success: false }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    userId = user.id;
 
     const { action, private_key } = await req.json() as TradeRequest;
 
     if (action === 'start') {
       // Validate private key format (basic check)
       if (!private_key || private_key.length < 32) {
-        throw new Error('Invalid private key format');
+        return new Response(
+          JSON.stringify({ error: ERROR_MESSAGES.INVALID_INPUT, success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       // Get user's bot configuration
@@ -66,12 +106,11 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id)
         .maybeSingle() as { data: BotConfig | null, error: any };
 
-      if (configError) {
-        throw configError;
-      }
-
-      if (!config) {
-        throw new Error('Bot configuration not found. Please configure your wallet first.');
+      if (configError || !config) {
+        return new Response(
+          JSON.stringify({ error: ERROR_MESSAGES.INVALID_CONFIG, success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       console.log(`Starting trading bot for user ${user.id}`);
@@ -134,14 +173,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    throw new Error('Invalid action. Use "start" or "stop"');
+    return new Response(
+      JSON.stringify({ error: ERROR_MESSAGES.INVALID_INPUT, success: false }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
-    console.error('Error in trading-bot function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+    // Log detailed error server-side only
+    console.error('Error in trading-bot function:', {
+      error,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Return safe generic message to client
+    const safeMessage = mapErrorToSafeMessage(error);
+    
     return new Response(
       JSON.stringify({ 
-        error: errorMessage,
+        error: safeMessage,
         success: false 
       }),
       { 
