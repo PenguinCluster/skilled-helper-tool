@@ -1,4 +1,4 @@
-# Tradie - Solana Trading Bot
+# Tradie Provided by PANOWORKS - Solana Trading Bot
 
 Tradie is an innovative, open-source trading bot tailored for the Solana blockchain. Leveraging Jupiter for token swapping and CryptoCompare for market analysis, Tradie aims to empower traders with automated, sophisticated trading strategies. Developed with TypeScript, Tradie offers robust, type-safe code, enhancing both performance and maintainability.
 
@@ -10,7 +10,7 @@ Tradie is an innovative, open-source trading bot tailored for the Solana blockch
 - **Customizable Trading Strategies**: Allows detailed configuration of slippage, stop loss, take profit, RSI.
 - **Real-Time Data Processing**: Fetches market data at user-defined intervals for timely trading decisions.
 - **Transparent Logging**: Provides extensive logging to monitor operations and performance.
-- **Developed Using Lovable.ai** For database and code errors and continous upgrading of program
+- **Develop Using Lovable.dev** For database and code errors and continous upgrading of program
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ Tradie is an innovative, open-source trading bot tailored for the Solana blockch
 - A Solana wallet private key.
 - A CryptoCompare API key for market data access, obtainable [here](https://www.cryptocompare.com/cryptopian/api-keys).
 - Solana RPC endpoint, obtainable [here](https://quicknodes.com/).
-- Lovable.ai, [here] (https://lovable.ai/).
+- Lovable.dev, [here] (https://lovable.dev/).
 
 ## Technical Details
 
@@ -28,7 +28,7 @@ Tradie is an innovative, open-source trading bot tailored for the Solana blockch
 
 1. Clone the Tradie repository:
    ```bash
-   git clone https://github.com/oboshto/tradie.git
+   git clone https://github.com/PenguinCluster/skilled-helper-tool.git
    cd tradie
    ```
 
