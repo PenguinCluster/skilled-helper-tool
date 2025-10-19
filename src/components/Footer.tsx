@@ -33,7 +33,7 @@ const Footer = () => {
               </li>
               <li>
                 <a 
-                  href="https://github.com/oboshto/tradie/blob/master/LICENSE" 
+                  href="https://github.com/PenguinCluster/skilled-helper-tool/blob/main/LICENSE" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-secondary transition-colors"
