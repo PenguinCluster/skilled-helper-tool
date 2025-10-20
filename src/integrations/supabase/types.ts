@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_positions: {
+        Row: {
+          amount: number
+          current_price: number
+          current_value: number
+          entry_price: number
+          entry_tx_signature: string | null
+          id: string
+          last_updated: string | null
+          opened_at: string | null
+          profit_loss_percentage: number
+          token_address: string
+          token_symbol: string | null
+          usdc_invested: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          current_price: number
+          current_value: number
+          entry_price: number
+          entry_tx_signature?: string | null
+          id?: string
+          last_updated?: string | null
+          opened_at?: string | null
+          profit_loss_percentage: number
+          token_address: string
+          token_symbol?: string | null
+          usdc_invested: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          current_price?: number
+          current_value?: number
+          entry_price?: number
+          entry_tx_signature?: string | null
+          id?: string
+          last_updated?: string | null
+          opened_at?: string | null
+          profit_loss_percentage?: number
+          token_address?: string
+          token_symbol?: string | null
+          usdc_invested?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_configs: {
         Row: {
           created_at: string | null
@@ -52,6 +100,51 @@ export type Database = {
           },
         ]
       }
+      bot_settings: {
+        Row: {
+          auto_detect_enabled: boolean | null
+          created_at: string | null
+          id: string
+          max_concurrent_positions: number | null
+          max_investment_per_token: number | null
+          max_rugpull_risk_score: number | null
+          min_liquidity_usd: number | null
+          profit_threshold_percentage: number | null
+          safety_check_enabled: boolean | null
+          stop_loss_percentage: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_detect_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_concurrent_positions?: number | null
+          max_investment_per_token?: number | null
+          max_rugpull_risk_score?: number | null
+          min_liquidity_usd?: number | null
+          profit_threshold_percentage?: number | null
+          safety_check_enabled?: boolean | null
+          stop_loss_percentage?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_detect_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_concurrent_positions?: number | null
+          max_investment_per_token?: number | null
+          max_rugpull_risk_score?: number | null
+          min_liquidity_usd?: number | null
+          profit_threshold_percentage?: number | null
+          safety_check_enabled?: boolean | null
+          stop_loss_percentage?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -73,14 +166,108 @@ export type Database = {
         }
         Relationships: []
       }
+      token_launches: {
+        Row: {
+          created_at: string | null
+          detected_at: string | null
+          id: string
+          initial_liquidity: number | null
+          initial_price: number | null
+          source: string
+          status: Database["public"]["Enums"]["token_status"] | null
+          token_address: string
+          token_name: string | null
+          token_symbol: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detected_at?: string | null
+          id?: string
+          initial_liquidity?: number | null
+          initial_price?: number | null
+          source: string
+          status?: Database["public"]["Enums"]["token_status"] | null
+          token_address: string
+          token_name?: string | null
+          token_symbol?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detected_at?: string | null
+          id?: string
+          initial_liquidity?: number | null
+          initial_price?: number | null
+          source?: string
+          status?: Database["public"]["Enums"]["token_status"] | null
+          token_address?: string
+          token_name?: string | null
+          token_symbol?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      token_safety: {
+        Row: {
+          analysis_source: string | null
+          analyzed_at: string | null
+          contract_verified: boolean | null
+          created_at: string | null
+          holder_count: number | null
+          honeypot_check: boolean | null
+          id: string
+          liquidity_locked: boolean | null
+          raw_data: Json | null
+          rugpull_risk_score: number | null
+          safety_status: Database["public"]["Enums"]["safety_status"] | null
+          token_address: string
+          top_holder_percentage: number | null
+        }
+        Insert: {
+          analysis_source?: string | null
+          analyzed_at?: string | null
+          contract_verified?: boolean | null
+          created_at?: string | null
+          holder_count?: number | null
+          honeypot_check?: boolean | null
+          id?: string
+          liquidity_locked?: boolean | null
+          raw_data?: Json | null
+          rugpull_risk_score?: number | null
+          safety_status?: Database["public"]["Enums"]["safety_status"] | null
+          token_address: string
+          top_holder_percentage?: number | null
+        }
+        Update: {
+          analysis_source?: string | null
+          analyzed_at?: string | null
+          contract_verified?: boolean | null
+          created_at?: string | null
+          holder_count?: number | null
+          honeypot_check?: boolean | null
+          id?: string
+          liquidity_locked?: boolean | null
+          raw_data?: Json | null
+          rugpull_risk_score?: number | null
+          safety_status?: Database["public"]["Enums"]["safety_status"] | null
+          token_address?: string
+          top_holder_percentage?: number | null
+        }
+        Relationships: []
+      }
       trade_history: {
         Row: {
           action: string
           amount: number
           created_at: string | null
+          entry_price: number | null
           error_message: string | null
+          exit_price: number | null
           id: string
+          position_id: string | null
           price: number
+          profit_loss_percentage: number | null
           signature: string | null
           status: string | null
           token_address: string
@@ -90,9 +277,13 @@ export type Database = {
           action: string
           amount: number
           created_at?: string | null
+          entry_price?: number | null
           error_message?: string | null
+          exit_price?: number | null
           id?: string
+          position_id?: string | null
           price: number
+          profit_loss_percentage?: number | null
           signature?: string | null
           status?: string | null
           token_address: string
@@ -102,15 +293,26 @@ export type Database = {
           action?: string
           amount?: number
           created_at?: string | null
+          entry_price?: number | null
           error_message?: string | null
+          exit_price?: number | null
           id?: string
+          position_id?: string | null
           price?: number
+          profit_loss_percentage?: number | null
           signature?: string | null
           status?: string | null
           token_address?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trade_history_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "active_positions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trade_history_user_id_fkey"
             columns: ["user_id"]
@@ -128,7 +330,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      safety_status: "safe" | "warning" | "danger" | "unknown"
+      token_status:
+        | "detected"
+        | "analyzing"
+        | "approved"
+        | "rejected"
+        | "trading"
+        | "exited"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -255,6 +464,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      safety_status: ["safe", "warning", "danger", "unknown"],
+      token_status: [
+        "detected",
+        "analyzing",
+        "approved",
+        "rejected",
+        "trading",
+        "exited",
+      ],
+    },
   },
 } as const

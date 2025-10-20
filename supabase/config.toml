@@ -1,1 +1,13 @@
 project_id = "nakmssiaechirxhggyas"
+
+[functions.trading-bot]
+verify_jwt = true
+
+[functions.jupiter-swap]
+verify_jwt = true
+
+[functions.check-token-safety]
+verify_jwt = true
+
+[functions.monitor-prices]
+verify_jwt = true

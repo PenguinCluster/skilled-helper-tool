@@ -8,6 +8,8 @@ import { Loader2, LogOut, Power, PowerOff } from "lucide-react";
 import WalletConfig from "@/components/WalletConfig";
 import TradeHistory from "@/components/TradeHistory";
 import BotStatus from "@/components/BotStatus";
+import { BotSettings } from "@/components/BotSettings";
+import { ActivePositions } from "@/components/ActivePositions";
 
 const Dashboard = () => {
   const [session, setSession] = useState(null);
@@ -74,6 +76,11 @@ const Dashboard = () => {
           <div className="grid gap-6 md:grid-cols-2">
             <WalletConfig />
             <BotStatus />
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2">
+            <BotSettings />
+            <ActivePositions />
           </div>
           
           <TradeHistory />
