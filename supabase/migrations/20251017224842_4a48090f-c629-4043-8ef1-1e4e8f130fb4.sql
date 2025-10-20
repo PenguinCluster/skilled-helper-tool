@@ -43,7 +43,7 @@ CREATE TABLE public.bot_configs (
   user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   wallet_public_key text NOT NULL,
   wallet_private_key_encrypted text NOT NULL,
-  rpc_endpoint text DEFAULT 'https://api.mainnet-beta.solana.com',
+  rpc_endpoint text DEFAULT 'https://api.devnet.solana.com',
   is_active boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),

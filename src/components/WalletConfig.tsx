@@ -20,7 +20,7 @@ const walletConfigSchema = z.object({
 
 const WalletConfig = () => {
   const [publicKey, setPublicKey] = useState("");
-  const [rpcEndpoint, setRpcEndpoint] = useState("https://api.mainnet-beta.solana.com");
+  const [rpcEndpoint, setRpcEndpoint] = useState("https://api.devnet.solana.com");
   const [loading, setLoading] = useState(false);
   const [hasConfig, setHasConfig] = useState(false);
   const { toast } = useToast();
@@ -41,7 +41,7 @@ const WalletConfig = () => {
 
     if (data) {
       setPublicKey(data.wallet_public_key);
-      setRpcEndpoint(data.rpc_endpoint || "https://api.mainnet-beta.solana.com");
+      setRpcEndpoint(data.rpc_endpoint || "https://api.devnet.solana.com");
       setHasConfig(true);
     }
   };
@@ -141,7 +141,7 @@ const WalletConfig = () => {
             <Label htmlFor="rpcEndpoint">RPC Endpoint</Label>
             <Input
               id="rpcEndpoint"
-              placeholder="https://api.mainnet-beta.solana.com"
+              placeholder="https://api.devnet.solana.com"
               value={rpcEndpoint}
               onChange={(e) => setRpcEndpoint(e.target.value)}
               required
