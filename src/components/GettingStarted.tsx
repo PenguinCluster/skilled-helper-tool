@@ -5,7 +5,7 @@ const steps = [
     icon: Code,
     title: "Clone Repository",
     description: "Get started by cloning the Tradie repository from GitHub",
-    code: "git clone https://github.com/oboshto/tradie.git\ncd tradie",
+    code: "git clone https://github.com/PenguinCluster/skilled-helper-tool",
   },
   {
     icon: Terminal,
