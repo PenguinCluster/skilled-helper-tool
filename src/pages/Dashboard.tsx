@@ -10,6 +10,7 @@ import TradeHistory from "@/components/TradeHistory";
 import BotStatus from "@/components/BotStatus";
 import { BotSettings } from "@/components/BotSettings";
 import { ActivePositions } from "@/components/ActivePositions";
+import { ManualTrade } from "@/components/ManualTrade";
 
 const Dashboard = () => {
   const [session, setSession] = useState(null);
@@ -77,6 +78,8 @@ const Dashboard = () => {
             <WalletConfig />
             <BotStatus />
           </div>
+          
+          <ManualTrade />
           
           <div className="grid gap-6 md:grid-cols-2">
             <BotSettings />

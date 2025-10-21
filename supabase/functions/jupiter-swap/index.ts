@@ -13,6 +13,7 @@ interface SwapRequest {
   amount: number;
   private_key: string;
   slippage_bps?: number;
+  input_token_mint?: string;
 }
 
 Deno.serve(async (req) => {
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { token_address, action, amount, private_key, slippage_bps = 50 } = await req.json() as SwapRequest;
+    const { token_address, action, amount, private_key, slippage_bps = 50, input_token_mint } = await req.json() as SwapRequest;
 
     // Get user's wallet config
     const { data: config } = await supabaseClient
@@ -73,14 +74,17 @@ Deno.serve(async (req) => {
 
     const connection = new Connection(config.rpc_endpoint);
     
-    // USDC mint address on Solana mainnet
+    // Default to USDC if not specified
     const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const tradingTokenMint = input_token_mint || USDC_MINT;
     
-    const inputMint = action === 'buy' ? USDC_MINT : token_address;
-    const outputMint = action === 'buy' ? token_address : USDC_MINT;
+    const inputMint = action === 'buy' ? tradingTokenMint : token_address;
+    const outputMint = action === 'buy' ? token_address : tradingTokenMint;
     
-    // Convert amount to lamports (assuming 6 decimals for USDC)
-    const amountLamports = Math.floor(amount * 1_000_000);
+    // Convert amount to lamports (6 decimals for USDC, 9 for SOL)
+    const decimals = tradingTokenMint === SOL_MINT ? 9 : 6;
+    const amountLamports = Math.floor(amount * Math.pow(10, decimals));
 
     console.log(`Getting Jupiter quote for ${action}: ${amountLamports} from ${inputMint} to ${outputMint}`);
 
@@ -142,8 +146,11 @@ Deno.serve(async (req) => {
 
     console.log('Transaction confirmed:', signature);
 
-    const outputAmount = parseFloat(quoteData.outAmount) / 1_000_000;
+    // Calculate output amount with correct decimals
+    const outputDecimals = action === 'buy' ? 6 : decimals; // Output is always in the "output" token's decimals
+    const outputAmount = parseFloat(quoteData.outAmount) / Math.pow(10, outputDecimals);
     const priceImpact = quoteData.priceImpactPct || 0;
+    const price = parseFloat(quoteData.inAmount) / parseFloat(quoteData.outAmount);
 
     // Record trade in history
     await supabaseClient
@@ -153,7 +160,7 @@ Deno.serve(async (req) => {
         token_address,
         action: action.toUpperCase(),
         amount: outputAmount,
-        price: parseFloat(quoteData.inAmount) / parseFloat(quoteData.outAmount),
+        price,
         status: 'success',
         signature,
       });
@@ -163,6 +170,7 @@ Deno.serve(async (req) => {
         success: true,
         signature,
         outputAmount,
+        price,
         priceImpact,
         message: `${action === 'buy' ? 'Bought' : 'Sold'} ${outputAmount} tokens`,
       }),

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Settings } from "lucide-react";
@@ -20,6 +21,7 @@ export const BotSettings = () => {
     safety_check_enabled: true,
     min_liquidity_usd: 5000,
     max_rugpull_risk_score: 30,
+    trading_token_mint: "So11111111111111111111111111111111111111112", // SOL by default
   });
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export const BotSettings = () => {
         safety_check_enabled: data.safety_check_enabled,
         min_liquidity_usd: Number(data.min_liquidity_usd),
         max_rugpull_risk_score: Number(data.max_rugpull_risk_score),
+        trading_token_mint: data.trading_token_mint || "So11111111111111111111111111111111111111112",
       });
     }
   };
@@ -121,7 +124,9 @@ export const BotSettings = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="max-investment">Max Investment Per Token (USDC)</Label>
+            <Label htmlFor="max-investment">
+              Max Investment Per Token ({settings.trading_token_mint === "So11111111111111111111111111111111111111112" ? "SOL" : "USDC"})
+            </Label>
             <Input
               id="max-investment"
               type="number"
@@ -165,6 +170,30 @@ export const BotSettings = () => {
             />
             <p className="text-sm text-muted-foreground">0-100 scale, lower is safer</p>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="trading-token">Trading Token</Label>
+          <Select 
+            value={settings.trading_token_mint === "So11111111111111111111111111111111111111112" ? "SOL" : "USDC"}
+            onValueChange={(value) => setSettings({ 
+              ...settings, 
+              trading_token_mint: value === "SOL" 
+                ? "So11111111111111111111111111111111111111112" 
+                : "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            })}
+          >
+            <SelectTrigger id="trading-token">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="SOL">SOL (Native Solana)</SelectItem>
+              <SelectItem value="USDC">USDC (Stablecoin)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Token used for buying/selling (balance must be available in wallet)
+          </p>
         </div>
 
         <div className="space-y-4 pt-4 border-t">

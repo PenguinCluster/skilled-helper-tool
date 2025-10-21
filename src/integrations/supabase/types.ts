@@ -112,6 +112,7 @@ export type Database = {
           profit_threshold_percentage: number | null
           safety_check_enabled: boolean | null
           stop_loss_percentage: number | null
+          trading_token_mint: string | null
           updated_at: string | null
           user_id: string
         }
@@ -126,6 +127,7 @@ export type Database = {
           profit_threshold_percentage?: number | null
           safety_check_enabled?: boolean | null
           stop_loss_percentage?: number | null
+          trading_token_mint?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -140,6 +142,7 @@ export type Database = {
           profit_threshold_percentage?: number | null
           safety_check_enabled?: boolean | null
           stop_loss_percentage?: number | null
+          trading_token_mint?: string | null
           updated_at?: string | null
           user_id?: string
         }

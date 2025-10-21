@@ -55,6 +55,7 @@ interface BotSettings {
   safety_check_enabled: boolean;
   min_liquidity_usd: number;
   max_rugpull_risk_score: number;
+  trading_token_mint: string;
 }
 
 async function executeTradingCycle(
@@ -154,7 +155,8 @@ async function executeTradingCycle(
             settings.max_investment_per_token,
             privateKey,
             userId,
-            authToken
+            authToken,
+            settings.trading_token_mint
           );
 
           // Only buy one token per cycle
@@ -175,10 +177,12 @@ async function executeBuy(
   amount: number,
   privateKey: string,
   userId: string,
-  authToken: string
+  authToken: string,
+  tradingTokenMint: string
 ) {
   try {
-    console.log(`Buying ${token.token_symbol} for ${amount} USDC`);
+    const tokenSymbol = tradingTokenMint === "So11111111111111111111111111111111111111112" ? "SOL" : "USDC";
+    console.log(`Buying ${token.token_symbol} for ${amount} ${tokenSymbol}`);
 
     // Call jupiter-swap function
     const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/jupiter-swap`, {
@@ -192,6 +196,7 @@ async function executeBuy(
         action: 'buy',
         amount: amount,
         private_key: privateKey,
+        input_token_mint: tradingTokenMint,
       }),
     });
 
