@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const COMMON_TOKENS = {
   SOL: "So11111111111111111111111111111111111111112",
@@ -19,7 +20,33 @@ export const ManualTrade = () => {
   const [amount, setAmount] = useState("");
   const [action, setAction] = useState<"buy" | "sell">("buy");
   const [loading, setLoading] = useState(false);
+  const [checkingSafety, setCheckingSafety] = useState(false);
+  const [safetyStatus, setSafetyStatus] = useState<any>(null);
   const { toast } = useToast();
+
+  const checkTokenSafety = async () => {
+    if (!targetTokenMint.trim()) return;
+
+    setCheckingSafety(true);
+    setSafetyStatus(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke('check-token-safety', {
+        body: { token_address: targetTokenMint.trim() },
+      });
+
+      if (error) throw error;
+      if (data.success) {
+        setSafetyStatus(data);
+      }
+    } catch (error: any) {
+      console.error("Safety check error:", error);
+    } finally {
+      setCheckingSafety(false);
+    }
+  };
 
   const handleTrade = async () => {
     if (!targetTokenMint.trim() || !amount || parseFloat(amount) <= 0) {
@@ -136,12 +163,49 @@ export const ManualTrade = () => {
 
         <div className="space-y-2">
           <Label htmlFor="target-mint">Target Token Mint Address</Label>
-          <Input
-            id="target-mint"
-            placeholder="Enter token mint address (e.g., EPjF...Dt1v)"
-            value={targetTokenMint}
-            onChange={(e) => setTargetTokenMint(e.target.value)}
-          />
+          <div className="flex gap-2">
+            <Input
+              id="target-mint"
+              placeholder="Enter token mint address"
+              value={targetTokenMint}
+              onChange={(e) => {
+                setTargetTokenMint(e.target.value);
+                setSafetyStatus(null);
+              }}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={checkTokenSafety}
+              disabled={checkingSafety || !targetTokenMint.trim()}
+            >
+              {checkingSafety ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          {safetyStatus && (
+            <div className="flex items-center gap-2 text-sm">
+              <Badge
+                variant="outline"
+                className={
+                  safetyStatus.safety_status === 'safe'
+                    ? 'border-green-500/50 text-green-400'
+                    : safetyStatus.safety_status === 'warning'
+                    ? 'border-yellow-500/50 text-yellow-400'
+                    : 'border-red-500/50 text-red-400'
+                }
+              >
+                {safetyStatus.safety_status.toUpperCase()}
+              </Badge>
+              <span className="text-muted-foreground">
+                Risk: {safetyStatus.rugpull_risk_score}/100
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
