@@ -36,26 +36,36 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if URL has reset parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('reset') === 'true') {
-      setIsResettingPassword(true);
-    }
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // 1) Listen for auth changes FIRST to avoid missing events and stale state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session && !isResettingPassword) {
+
+      if (event === "PASSWORD_RECOVERY") {
+        // Enter reset mode and ensure the URL contains reset=true (without reloading)
+        setIsResettingPassword(true);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('reset') !== 'true') {
+          url.searchParams.set('reset', 'true');
+          window.history.replaceState({}, '', url);
+        }
+        return; // don't navigate
+      }
+
+      // Guard navigation during reset flow by checking the current URL directly
+      const isResetFlow = new URLSearchParams(window.location.search).get('reset') === 'true';
+      if (session && event === "SIGNED_IN" && !isResetFlow) {
         navigate("/dashboard");
       }
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // 2) THEN check URL and existing session
+    const urlParams = new URLSearchParams(window.location.search);
+    const isResetFlow = urlParams.get('reset') === 'true';
+    if (isResetFlow) setIsResettingPassword(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (event === "PASSWORD_RECOVERY") {
-        setIsResettingPassword(true);
-      } else if (session && event === "SIGNED_IN" && !isResettingPassword) {
+      if (session && !isResetFlow) {
         navigate("/dashboard");
       }
     });
