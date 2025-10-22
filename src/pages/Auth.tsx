@@ -232,7 +232,7 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error, data } = await supabase.auth.updateUser({
         password: newPassword
       });
 
@@ -243,9 +243,21 @@ const Auth = () => {
           variant: "destructive",
         });
       } else {
+        // Send confirmation email
+        if (data.user?.email) {
+          try {
+            await supabase.functions.invoke('send-password-change-email', {
+              body: { email: data.user.email }
+            });
+          } catch (emailError) {
+            console.error('Failed to send confirmation email:', emailError);
+            // Don't block the flow if email fails
+          }
+        }
+
         toast({
           title: "Password updated!",
-          description: "Your password has been successfully updated",
+          description: "Your password has been successfully updated. Check your email for confirmation.",
         });
         setIsResettingPassword(false);
         navigate("/dashboard");
