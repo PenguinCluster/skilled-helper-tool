@@ -28,16 +28,24 @@ const authSchema = z.object({
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if URL has reset parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reset') === 'true') {
+      setIsResettingPassword(true);
+    }
+
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
+      if (session && !isResettingPassword) {
         navigate("/dashboard");
       }
     });
@@ -45,7 +53,9 @@ const Auth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session && event === "SIGNED_IN") {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsResettingPassword(true);
+      } else if (session && event === "SIGNED_IN" && !isResettingPassword) {
         navigate("/dashboard");
       }
     });
@@ -197,7 +207,51 @@ const Auth = () => {
     }
   };
 
-  if (session) {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const passwordValidation = authSchema.shape.password.safeParse(newPassword);
+    if (!passwordValidation.success) {
+      toast({
+        title: "Invalid password",
+        description: passwordValidation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        toast({
+          title: "Update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Password updated!",
+          description: "Your password has been successfully updated",
+        });
+        setIsResettingPassword(false);
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (session && !isResettingPassword) {
     return null;
   }
 
@@ -211,10 +265,33 @@ const Auth = () => {
             Tradie Bot
           </CardTitle>
           <CardDescription>
-            Access your Solana trading bot from anywhere
+            {isResettingPassword ? "Set your new password" : "Access your Solana trading bot from anywhere"}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isResettingPassword ? (
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Min 8 chars: A-Z, a-z, 0-9, special"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Must include: uppercase, lowercase, number, and special character
+                </p>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Update Password
+              </Button>
+            </form>
+          ) : (
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -298,6 +375,7 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
