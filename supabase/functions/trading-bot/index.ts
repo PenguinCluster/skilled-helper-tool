@@ -67,107 +67,185 @@ async function executeTradingCycle(
   authToken: string
 ) {
   try {
-    console.log('Executing trading cycle...');
+    console.log('=== STARTING TRADING CYCLE ===');
+    console.log('User ID:', userId);
+    console.log('Settings:', JSON.stringify(settings, null, 2));
 
     // Check current positions
-    const { data: positions } = await supabaseClient
+    const { data: positions, error: posError } = await supabaseClient
       .from('active_positions')
       .select('*')
       .eq('user_id', userId);
 
-    console.log(`Current positions: ${positions?.length || 0}`);
+    if (posError) {
+      console.error('❌ Error fetching positions:', posError);
+      throw posError;
+    }
+
+    console.log(`📊 Current positions: ${positions?.length || 0}`);
 
     // Monitor existing positions
     if (positions && positions.length > 0) {
+      console.log('💼 Monitoring existing positions...');
       for (const position of positions) {
-        const profitLoss = position.profit_loss_percentage;
-        
-        console.log(`Position ${position.token_symbol}: P/L ${profitLoss}%`);
+        try {
+          const profitLoss = position.profit_loss_percentage;
+          
+          console.log(`  📈 ${position.token_symbol}: P/L ${profitLoss?.toFixed(2)}%`);
 
-        // Check if we should sell
-        if (profitLoss >= settings.profit_threshold_percentage) {
-          console.log(`Taking profit on ${position.token_symbol} at ${profitLoss}%`);
-          await executeSell(supabaseClient, position, privateKey, userId, authToken);
-        } else if (profitLoss <= settings.stop_loss_percentage) {
-          console.log(`Stop loss triggered on ${position.token_symbol} at ${profitLoss}%`);
-          await executeSell(supabaseClient, position, privateKey, userId, authToken);
+          // Check if we should sell
+          if (profitLoss >= settings.profit_threshold_percentage) {
+            console.log(`  ✅ Taking profit on ${position.token_symbol} at ${profitLoss}%`);
+            await executeSell(supabaseClient, position, privateKey, userId, authToken);
+          } else if (profitLoss <= settings.stop_loss_percentage) {
+            console.log(`  🛑 Stop loss triggered on ${position.token_symbol} at ${profitLoss}%`);
+            await executeSell(supabaseClient, position, privateKey, userId, authToken);
+          } else {
+            console.log(`  ⏳ Holding ${position.token_symbol}`);
+          }
+        } catch (posError) {
+          console.error(`  ❌ Error processing position ${position.token_symbol}:`, posError);
+          // Log error to history but continue with other positions
+          await supabaseClient
+            .from('trade_history')
+            .insert({
+              user_id: userId,
+              token_address: position.token_address,
+              action: 'POSITION_ERROR',
+              amount: 0,
+              price: 0,
+              status: 'failed',
+              signature: posError instanceof Error ? posError.message : 'Unknown error'
+            });
         }
       }
     }
 
     // Look for new trading opportunities if under position limit
     if (settings.auto_detect_enabled && (!positions || positions.length < settings.max_concurrent_positions)) {
-      console.log('Looking for new trading opportunities...');
+      console.log('🔍 Auto-detect enabled. Looking for new trading opportunities...');
+      console.log(`📊 Capacity: ${positions?.length || 0}/${settings.max_concurrent_positions} positions`);
       
       // Get recent token launches
-      const { data: launches } = await supabaseClient
+      const { data: launches, error: launchError } = await supabaseClient
         .from('token_launches')
         .select('*')
         .eq('status', 'detected')
         .order('detected_at', { ascending: false })
         .limit(5);
 
-      console.log(`Found ${launches?.length || 0} potential tokens`);
+      if (launchError) {
+        console.error('❌ Error fetching token launches:', launchError);
+      } else {
+        console.log(`🚀 Found ${launches?.length || 0} potential tokens`);
 
-      if (launches && launches.length > 0) {
-        for (const launch of launches) {
-          // Skip if already have a position
-          const hasPosition = positions?.some((p: any) => p.token_address === launch.token_address);
-          if (hasPosition) continue;
+        if (launches && launches.length > 0) {
+          for (const launch of launches) {
+            try {
+              // Skip if already have a position
+              const hasPosition = positions?.some((p: any) => p.token_address === launch.token_address);
+              if (hasPosition) {
+                console.log(`  ⏭️  Already have position in ${launch.token_symbol || launch.token_address}`);
+                continue;
+              }
 
-          // Check safety if enabled
-          if (settings.safety_check_enabled) {
-            console.log(`Checking safety for ${launch.token_symbol || launch.token_address}`);
-            
-            const { data: safety } = await supabaseClient
-              .from('token_safety')
-              .select('*')
-              .eq('token_address', launch.token_address)
-              .maybeSingle();
+              // Check safety if enabled
+              if (settings.safety_check_enabled) {
+                console.log(`  🛡️  Checking safety for ${launch.token_symbol || launch.token_address}...`);
+                
+                const { data: safety } = await supabaseClient
+                  .from('token_safety')
+                  .select('*')
+                  .eq('token_address', launch.token_address)
+                  .maybeSingle();
 
-            if (!safety) {
-              console.log('No safety data available, skipping');
-              continue;
-            }
+                if (!safety) {
+                  console.log('  ⚠️  No safety data available, skipping');
+                  continue;
+                }
 
-            if (safety.rugpull_risk_score > settings.max_rugpull_risk_score) {
-              console.log(`Risk score too high: ${safety.rugpull_risk_score}`);
-              continue;
-            }
+                console.log(`  📊 Safety data - Risk: ${safety.rugpull_risk_score}, Status: ${safety.safety_status}`);
 
-            if (safety.safety_status === 'unsafe') {
-              console.log('Token marked as unsafe, skipping');
-              continue;
+                if (safety.rugpull_risk_score > settings.max_rugpull_risk_score) {
+                  console.log(`  ❌ Risk score too high: ${safety.rugpull_risk_score} > ${settings.max_rugpull_risk_score}`);
+                  continue;
+                }
+
+                if (safety.safety_status === 'unsafe') {
+                  console.log('  ❌ Token marked as unsafe, skipping');
+                  continue;
+                }
+              } else {
+                console.log('  ⚠️  Safety checks DISABLED');
+              }
+
+              // Check liquidity
+              if (launch.initial_liquidity < settings.min_liquidity_usd) {
+                console.log(`  ❌ Liquidity too low: $${launch.initial_liquidity} < $${settings.min_liquidity_usd}`);
+                continue;
+              }
+
+              // Execute buy
+              console.log(`  💰 Executing buy for ${launch.token_symbol || launch.token_address}`);
+              await executeBuy(
+                supabaseClient,
+                launch,
+                settings.max_investment_per_token,
+                privateKey,
+                userId,
+                authToken,
+                settings.trading_token_mint
+              );
+
+              // Only buy one token per cycle
+              console.log('  ✅ Buy completed, stopping new position search');
+              break;
+            } catch (buyError) {
+              console.error(`  ❌ Error processing launch ${launch.token_symbol || launch.token_address}:`, buyError);
+              // Log and continue
+              await supabaseClient
+                .from('trade_history')
+                .insert({
+                  user_id: userId,
+                  token_address: launch.token_address,
+                  action: 'BUY_ERROR',
+                  amount: 0,
+                  price: 0,
+                  status: 'failed',
+                  signature: buyError instanceof Error ? buyError.message : 'Unknown error'
+                });
             }
           }
-
-          // Check liquidity
-          if (launch.initial_liquidity < settings.min_liquidity_usd) {
-            console.log(`Liquidity too low: $${launch.initial_liquidity}`);
-            continue;
-          }
-
-          // Execute buy
-          console.log(`Executing buy for ${launch.token_symbol || launch.token_address}`);
-          await executeBuy(
-            supabaseClient,
-            launch,
-            settings.max_investment_per_token,
-            privateKey,
-            userId,
-            authToken,
-            settings.trading_token_mint
-          );
-
-          // Only buy one token per cycle
-          break;
+        } else {
+          console.log('📭 No token launches found');
         }
       }
+    } else if (!settings.auto_detect_enabled) {
+      console.log('⏸️  Auto-detect disabled, skipping new token search');
+    } else {
+      console.log('🚫 Max positions reached, not looking for new trades');
     }
 
-    console.log('Trading cycle completed');
+    console.log('=== TRADING CYCLE COMPLETED ===');
   } catch (error) {
-    console.error('Error in trading cycle:', error);
+    console.error('💥 CRITICAL ERROR in trading cycle:', error);
+    // Log critical error
+    try {
+      await supabaseClient
+        .from('trade_history')
+        .insert({
+          user_id: userId,
+          token_address: 'SYSTEM',
+          action: 'CYCLE_ERROR',
+          amount: 0,
+          price: 0,
+          status: 'failed',
+          signature: error instanceof Error ? error.message : 'Unknown critical error'
+        });
+    } catch (logError) {
+      console.error('Failed to log critical error:', logError);
+    }
+    throw error;
   }
 }
 
@@ -182,9 +260,11 @@ async function executeBuy(
 ) {
   try {
     const tokenSymbol = tradingTokenMint === "So11111111111111111111111111111111111111112" ? "SOL" : "USDC";
-    console.log(`Buying ${token.token_symbol} for ${amount} ${tokenSymbol}`);
+    console.log(`💰 BUY: ${token.token_symbol} for ${amount} ${tokenSymbol}`);
+    console.log(`   Token address: ${token.token_address}`);
 
     // Call jupiter-swap function
+    console.log('   Calling jupiter-swap...');
     const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/jupiter-swap`, {
       method: 'POST',
       headers: {
@@ -201,12 +281,14 @@ async function executeBuy(
     });
 
     const result = await response.json();
+    console.log('   Jupiter swap response:', JSON.stringify(result, null, 2));
 
     if (result.success) {
-      console.log(`Buy successful: ${result.signature}`);
+      console.log(`   ✅ Buy successful! TX: ${result.signature}`);
+      console.log(`   Output amount: ${result.outputAmount}`);
       
       // Create active position
-      await supabaseClient
+      const { error: insertError } = await supabaseClient
         .from('active_positions')
         .insert({
           user_id: userId,
@@ -221,16 +303,29 @@ async function executeBuy(
           entry_tx_signature: result.signature,
         });
 
+      if (insertError) {
+        console.error('   ❌ Error creating position:', insertError);
+        throw insertError;
+      }
+
+      console.log('   ✅ Position recorded in database');
+
       // Update token launch status
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('token_launches')
         .update({ status: 'traded', user_id: userId })
         .eq('token_address', token.token_address);
+
+      if (updateError) {
+        console.warn('   ⚠️  Failed to update launch status:', updateError);
+      }
     } else {
-      console.error('Buy failed:', result.error);
+      console.error('   ❌ Buy failed:', result.error);
+      throw new Error(result.error || 'Buy transaction failed');
     }
   } catch (error) {
-    console.error('Error executing buy:', error);
+    console.error('   💥 ERROR executing buy:', error);
+    throw error;
   }
 }
 
@@ -242,9 +337,13 @@ async function executeSell(
   authToken: string
 ) {
   try {
-    console.log(`Selling ${position.token_symbol}`);
+    console.log(`💸 SELL: ${position.token_symbol}`);
+    console.log(`   Position ID: ${position.id}`);
+    console.log(`   Amount: ${position.amount}`);
+    console.log(`   Current P/L: ${position.profit_loss_percentage?.toFixed(2)}%`);
 
     // Call jupiter-swap function
+    console.log('   Calling jupiter-swap...');
     const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/jupiter-swap`, {
       method: 'POST',
       headers: {
@@ -260,18 +359,27 @@ async function executeSell(
     });
 
     const result = await response.json();
+    console.log('   Jupiter swap response:', JSON.stringify(result, null, 2));
 
     if (result.success) {
-      console.log(`Sell successful: ${result.signature}`);
+      console.log(`   ✅ Sell successful! TX: ${result.signature}`);
+      console.log(`   Final P/L: ${position.profit_loss_percentage?.toFixed(2)}%`);
       
       // Remove from active positions
-      await supabaseClient
+      const { error: deleteError } = await supabaseClient
         .from('active_positions')
         .delete()
         .eq('id', position.id);
 
+      if (deleteError) {
+        console.error('   ❌ Error removing position:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('   ✅ Position closed in database');
+
       // Update trade history with final P/L
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('trade_history')
         .update({
           status: 'completed',
@@ -280,11 +388,17 @@ async function executeSell(
         })
         .eq('position_id', position.id)
         .eq('action', 'buy');
+
+      if (updateError) {
+        console.warn('   ⚠️  Failed to update trade history:', updateError);
+      }
     } else {
-      console.error('Sell failed:', result.error);
+      console.error('   ❌ Sell failed:', result.error);
+      throw new Error(result.error || 'Sell transaction failed');
     }
   } catch (error) {
-    console.error('Error executing sell:', error);
+    console.error('   💥 ERROR executing sell:', error);
+    throw error;
   }
 }
 
@@ -382,31 +496,50 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id);
 
       // Start the trading loop
-      await executeTradingCycle(supabaseClient, user.id, config, settings, private_key, token);
-      
-      // Log to trade history
-      await supabaseClient
-        .from('trade_history')
-        .insert({
-          user_id: user.id,
-          token_address: 'SYSTEM',
-          action: 'BOT_STARTED',
-          amount: 0,
-          price: 0,
-          status: 'success'
-        });
+      try {
+        await executeTradingCycle(supabaseClient, user.id, config, settings, private_key, token);
+        
+        // Log to trade history
+        await supabaseClient
+          .from('trade_history')
+          .insert({
+            user_id: user.id,
+            token_address: 'SYSTEM',
+            action: 'BOT_STARTED',
+            amount: 0,
+            price: 0,
+            status: 'success'
+          });
 
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Trading bot started successfully',
-          config: {
-            public_key: config.wallet_public_key,
-            rpc_endpoint: config.rpc_endpoint
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Trading bot cycle completed successfully',
+            config: {
+              public_key: config.wallet_public_key,
+              rpc_endpoint: config.rpc_endpoint
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (cycleError) {
+        console.error('Trading cycle error:', cycleError);
+        
+        // Log error to trade history
+        await supabaseClient
+          .from('trade_history')
+          .insert({
+            user_id: user.id,
+            token_address: 'SYSTEM',
+            action: 'BOT_ERROR',
+            amount: 0,
+            price: 0,
+            status: 'failed',
+            signature: cycleError instanceof Error ? cycleError.message : 'Unknown error'
+          });
+        
+        throw cycleError;
+      }
     } else if (action === 'stop') {
       console.log(`Stopping trading bot for user ${user.id}`);
       
